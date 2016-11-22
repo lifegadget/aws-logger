@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "outDir": "./lib",
+    "preserveConstEnums": true,
+    "removeComments": true
+  },
+  "include": [
+    "src/**/*",
+    "node_modules/aws-sdk/index.d.ts",
+    "node_modules/aws-sdk/global.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "typings",
+    "**/*-spec.ts"
+  ]
+}
