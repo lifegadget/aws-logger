@@ -2,6 +2,40 @@ interface IDictionary<T> {
   [key: string]: T;
 };
 
+interface AWSRequest {
+  region: string;
+}
+
+interface IRequestInput extends AWSRequest {
+  resource?: string;
+  path?: string;
+  httpMethod?: string;
+  headers?: IRequestHeaders;
+  querystringParameters?: IDictionary<string>;
+  pathParameters?: IDictionary<string>;
+  stageParameters?: IDictionary<string>;
+  requestContext?: IRequestContext;
+  body?: string;
+}
+
+interface ITimedRequest extends AWSRequest {
+  version: string;
+  /**
+   * A unique ID for the transaction
+   */
+  id: string;
+  /**
+   * Scheduled Type, etc.
+   */
+  'detail-type': string;
+  source: string;
+  account: string;
+  time: string;
+  region: string;
+  resource: string[];
+  detail: IDictionary<any>;
+}
+
 interface IContext {
   callbackWaitsForEmptyEventLoop?: Function;
   done?: Function;
@@ -91,21 +125,4 @@ interface IRequestHeaders {
   ['X-Forwarded-Port']?: string;
   ['X-Forwarded-Proto']?: string;
   [key: string]: string;
-}
-
-interface IRequestInput {
-  resource?: string;
-  path?: string;
-  httpMethod?: string;
-  headers?: IRequestHeaders;
-  querystringParameters?: IDictionary<string>;
-  pathParameters?: IDictionary<string>;
-  stageParameters?: IDictionary<string>;
-  requestContext?: IRequestContext;
-  body?: string;
-}
-
-interface IGatewayRequest {
-  message: string;
-  input: IRequestInput;
 }

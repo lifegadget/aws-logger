@@ -14,6 +14,7 @@ export const handler = (event: IRequestInput, context: IContext, cb: IGatewayCal
     MessageBody: event.body,
     QueueUrl: Queue.EVENT_QUEUE_URL(event),
   };
+  const PROCESSOR_FUNCTION = process.env['AWS_LAMBDA_FUNCTION_NAME'].replace('receiver', 'processor');
 
   sqs.sendMessage(message, (err, data) => {
     if (err) {
@@ -23,30 +24,31 @@ export const handler = (event: IRequestInput, context: IContext, cb: IGatewayCal
         body: 'There were problems adding to SQS:\n' + err.stack,
       });
     }
-    console.log('dropped into queue');
-    lambda.invoke({
-      InvocationType: 'Event',
-      FunctionName: 'processor',
-      LogType: 'None',
-      Payload: JSON.stringify(data),
-    }, (e: any, response: any) => {
-      if (e) {
-        console.error(e, e.stack);
-        cb(e.message, {
-          statusCode: 500,
-          body: 'Problem invoking a processor after event added to queue',
-          error: e.code,
-        });
-      }
-      console.log('handed off to processor function\n', JSON.stringify(data, null , 2));
-      cb(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          lambda: response,
-          sqs: data,
-        }),
-      });
-    });
+    console.log('added to queue');
+    // lambda.invoke({
+    //   InvocationType: 'Event',
+    //   FunctionName: PROCESSOR_FUNCTION,
+    //   Payload: JSON.stringify(data),
+    // }, (e: any, response: any) => {
+    //   if (e) {
+    //     console.log(`There was a problem invoking the "processor" lambda function (${PROCESSOR_FUNCTION})`);
+    //     console.error(e);
+    //     cb(null, {
+    //       statusCode: 500,
+    //       body: 'Problem invoking a processor after event added to queue',
+    //       error: e.code,
+    //     });
+    //     return;
+    //   }
+    //   console.log('handed off to processor function\n', JSON.stringify(data, null , 2));
+    //   cb(null, {
+    //     statusCode: 200,
+    //     body: JSON.stringify({
+    //       lambda: response,
+    //       sqs: data,
+    //     }),
+    //   });
+    // });
 
   });
 

@@ -65,7 +65,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1479807422987-2016-11-22T09:37:02.987Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-receiver",
         "Handler": "lib/receiver.handler",
@@ -81,6 +81,29 @@
         "Description": "Receives events from clients and places in SQS queue, then calls \"processor\" to process the results."
       }
     },
+    "EventDashmanagerLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+        },
+        "FunctionName": "serverless-event-dev-event-manager",
+        "Handler": "lib/event-manager.handler",
+        "MemorySize": 1024,
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs4.3",
+        "Timeout": 6,
+        "Description": "Checks the event queue for size and then executes an appropriate number of \"processors\" to drain the queue."
+      }
+    },
     "ProcessorLambdaFunction": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
@@ -88,7 +111,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1479807422987-2016-11-22T09:37:02.987Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-processor",
         "Handler": "lib/processor.handler",
@@ -101,7 +124,104 @@
         },
         "Runtime": "nodejs4.3",
         "Timeout": 6,
-        "Description": "Takes events out of the queue and structure them into useful JSON blogs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties."
+        "Description": "Takes events out of the queue and structures them into useful JSON blobs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties."
+      }
+    },
+    "AggregatorLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+        },
+        "FunctionName": "serverless-event-dev-aggregator",
+        "Handler": "lib/aggregator.handler",
+        "MemorySize": 1024,
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Runtime": "nodejs4.3",
+        "Timeout": 6,
+        "Description": "Rolls up transactional entries into aggregates (including daily, monthly, user, etc)."
+      }
+    },
+    "EventDashmanagerEventsRuleSchedule1": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "ScheduleExpression": "rate(1 minute)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "EventDashmanagerLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "event-managerSchedule"
+          }
+        ]
+      }
+    },
+    "EventDashmanagerLambdaPermissionEventsRuleSchedule1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "EventDashmanagerLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "EventDashmanagerEventsRuleSchedule1",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "AggregatorEventsRuleSchedule1": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "ScheduleExpression": "rate(60 minutes)",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "AggregatorLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "aggregatorSchedule"
+          }
+        ]
+      }
+    },
+    "AggregatorLambdaPermissionEventsRuleSchedule1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "AggregatorLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "AggregatorEventsRuleSchedule1",
+            "Arn"
+          ]
+        }
       }
     },
     "ApiGatewayRestApi": {
@@ -128,56 +248,15 @@
     "ApiGatewayMethodLoggerPost": {
       "Type": "AWS::ApiGateway::Method",
       "Properties": {
-        "AuthorizationType": "NONE",
         "HttpMethod": "POST",
-        "MethodResponses": [
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 200
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 400
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 401
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 403
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 404
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 422
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 500
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 502
-          },
-          {
-            "ResponseParameters": {},
-            "ResponseModels": {},
-            "StatusCode": 504
-          }
-        ],
         "RequestParameters": {},
+        "ResourceId": {
+          "Ref": "ApiGatewayResourceLogger"
+        },
+        "RestApiId": {
+          "Ref": "ApiGatewayRestApi"
+        },
+        "AuthorizationType": "NONE",
         "Integration": {
           "IntegrationHttpMethod": "POST",
           "Type": "AWS_PROXY",
@@ -199,78 +278,12 @@
                 "/invocations"
               ]
             ]
-          },
-          "RequestTemplates": {
-            "application/json": "\n            #define( $loop )\n              {\n              #foreach($key in $map.keySet())\n                  \"$util.escapeJavaScript($key)\":\n                    \"$util.escapeJavaScript($map.get($key))\"\n                    #if( $foreach.hasNext ) , #end\n              #end\n              }\n            #end\n\n            {\n              \"body\": $input.json(\"$\"),\n              \"method\": \"$context.httpMethod\",\n              \"principalId\": \"$context.authorizer.principalId\",\n              \"stage\": \"$context.stage\",\n\n              #set( $map = $input.params().header )\n              \"headers\": $loop,\n\n              #set( $map = $input.params().querystring )\n              \"query\": $loop,\n\n              #set( $map = $input.params().path )\n              \"path\": $loop,\n\n              #set( $map = $context.identity )\n              \"identity\": $loop,\n\n              #set( $map = $stageVariables )\n              \"stageVariables\": $loop\n            }\n          ",
-            "application/x-www-form-urlencoded": "\n            #define( $body )\n              {\n              #foreach( $token in $input.path('$').split('&') )\n                #set( $keyVal = $token.split('=') )\n                #set( $keyValSize = $keyVal.size() )\n                #if( $keyValSize >= 1 )\n                  #set( $key = $util.escapeJavaScript($util.urlDecode($keyVal[0])) )\n                  #if( $keyValSize >= 2 )\n                    #set( $val = $util.escapeJavaScript($util.urlDecode($keyVal[1])) )\n                  #else\n                    #set( $val = '' )\n                  #end\n                  \"$key\": \"$val\"#if($foreach.hasNext),#end\n                #end\n              #end\n              }\n            #end\n\n            #define( $loop )\n              {\n              #foreach($key in $map.keySet())\n                  \"$util.escapeJavaScript($key)\":\n                    \"$util.escapeJavaScript($map.get($key))\"\n                    #if( $foreach.hasNext ) , #end\n              #end\n              }\n            #end\n\n            {\n              \"body\": $body,\n              \"method\": \"$context.httpMethod\",\n              \"principalId\": \"$context.authorizer.principalId\",\n              \"stage\": \"$context.stage\",\n\n              #set( $map = $input.params().header )\n              \"headers\": $loop,\n\n              #set( $map = $input.params().querystring )\n              \"query\": $loop,\n\n              #set( $map = $input.params().path )\n              \"path\": $loop,\n\n              #set( $map = $context.identity )\n              \"identity\": $loop,\n\n              #set( $map = $stageVariables )\n              \"stageVariables\": $loop\n            }\n          "
-          },
-          "PassthroughBehavior": "NEVER",
-          "IntegrationResponses": [
-            {
-              "StatusCode": 200,
-              "SelectionPattern": "",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 400,
-              "SelectionPattern": ".*\\[400\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 401,
-              "SelectionPattern": ".*\\[401\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 403,
-              "SelectionPattern": ".*\\[403\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 404,
-              "SelectionPattern": ".*\\[404\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 422,
-              "SelectionPattern": ".*\\[422\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 500,
-              "SelectionPattern": ".*(Process\\s?exited\\s?before\\s?completing\\s?request|\\[500\\]).*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 502,
-              "SelectionPattern": ".*\\[502\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            },
-            {
-              "StatusCode": 504,
-              "SelectionPattern": ".*\\[504\\].*",
-              "ResponseParameters": {},
-              "ResponseTemplates": {}
-            }
-          ]
+          }
         },
-        "ResourceId": {
-          "Ref": "ApiGatewayResourceLogger"
-        },
-        "RestApiId": {
-          "Ref": "ApiGatewayRestApi"
-        }
+        "MethodResponses": []
       }
     },
-    "ApiGatewayDeployment1479807422995": {
+    "ApiGatewayDeployment1480341571815": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {
@@ -292,7 +305,27 @@
           ]
         },
         "Action": "lambda:InvokeFunction",
-        "Principal": "apigateway.amazonaws.com"
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "/*/*"
+            ]
+          ]
+        }
       }
     }
   },
@@ -311,11 +344,29 @@
         ]
       }
     },
+    "EventDashmanagerLambdaFunctionArn": {
+      "Description": "Lambda function info",
+      "Value": {
+        "Fn::GetAtt": [
+          "EventDashmanagerLambdaFunction",
+          "Arn"
+        ]
+      }
+    },
     "ProcessorLambdaFunctionArn": {
       "Description": "Lambda function info",
       "Value": {
         "Fn::GetAtt": [
           "ProcessorLambdaFunction",
+          "Arn"
+        ]
+      }
+    },
+    "AggregatorLambdaFunctionArn": {
+      "Description": "Lambda function info",
+      "Value": {
+        "Fn::GetAtt": [
+          "AggregatorLambdaFunction",
           "Arn"
         ]
       }

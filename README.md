@@ -1,25 +1,40 @@
-# Using this module in other modules
+# serverless-event
 
-Here is a quick example of how this module can be used in other modules. The [TypeScript Module Resolution Logic](https://www.typescriptlang.org/docs/handbook/module-resolution.html) makes it quite easy. The file `src/index.ts` acts as an aggregator of all the functionality in this module. It imports from other files and re-exports to provide a unified interface for this module. The _package.json_ file contains `main` attribute that points to the generated `lib/index.js` file and `typings` attribute that points to the generated `lib/index.d.ts` file.
+## Installation
 
-> If you are planning to have code in multiple files (which is quite natural for a NodeJS module) that users can import, make sure you update `src/index.ts` file appropriately.
+The first step is to install the Serverless Framework which handles most of the heavly lifting of deploying your microservices into the cloud. 
 
-Now assuming you have published this amazing module to _npm_ with the name `my-amazing-lib`, and installed it in the module in which you need it -
-
-- To use the `Greeter` class in a TypeScript file -
-
-```ts
-import { Greeter } from "my-amazing-lib";
-
-const greeter = new Greeter("World!");
-greeter.greet();
+```sh
+# install Serverless as a global dependency
+npm install -g serverless
+# now let's create a working directory for your microservices
+mkdir your-event-service
+cd your-event-service
+# and pull in the code for _serverless-event_
+git clone https://github.com/lifegadget/serverless-event.git 
 ```
 
-- To use the `Greeter` class in a JavaScript file -
+Now you have all the code you'll but to configure it for your needs you'll need to modify is the `serverless.yml` configuration file. The repo has a `serverless.yml.example` file so start with that by copying it into place:
 
-```js
-const Greeter = require('my-amazing-lib').Greeter;
-
-const greeter = new Greeter('World!');
-greeter.greet();
+```sh
+cp serverless.yml.example serverless.yml
 ```
+
+### Configuration of Serverless
+
+### AWS Permissions
+
+The base permissions of the API Gateway and Lambda function is done for us by the Serverless functions but it doesn't give our Lambda functions permissions to use services such as S3, SNS, or SQS so we'll need to set this up on a one time basis right now.
+
+#### SQS
+
+The following permissions must be given to the Lambda Role that Serverless has setup for our Lambda functions:
+
+- sqs:DeleteMessage
+- sqs:DeleteMessageBatch
+- sqs:GetQueueAttributes
+- sqs:GetQueueUrl
+- sqs:ReceiveMessage
+- sqs:SendMessage
+- sqs:SendMessageBatch
+

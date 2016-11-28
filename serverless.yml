@@ -65,9 +65,26 @@ functions:
     events:
       - http: POST logger
 
+  event-manager:
+    description: Checks the event queue for size and then executes an appropriate number of "processors" to drain the queue.
+    handler: lib/event-manager.handler
+    events:
+      - schedule:
+          rate: rate(1 minute)
+          enabled: true
+
   processor:
-    description: Takes events out of the queue and structure them into useful JSON blogs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties.
+    description: Takes events out of the queue and structures them into useful JSON blobs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties.
     handler: lib/processor.handler
+
+  aggregator:
+    description: Rolls up transactional entries into aggregates (including daily, monthly, user, etc).
+    handler: lib/aggregator.handler
+    events:
+      - schedule:
+          rate: rate(60 minutes)
+          enabled: true
+
 
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
