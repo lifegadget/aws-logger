@@ -37,7 +37,8 @@ export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCal
           Payload: JSON.stringify({
             batchSize,
             parent: event.id,
-            sequence: `${i} of ${workers}`
+            sequence: `${i} of ${workers}`,
+            region: event.region
           }),          
         }, (err, data) => {
           if (err) {

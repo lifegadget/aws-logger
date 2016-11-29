@@ -23,8 +23,13 @@ export const handler = (event: IRequestInput, context: IContext, cb: IGatewayCal
         statusCode: 500,
         body: 'There were problems adding to SQS:\n' + err.stack,
       });
+      return;
     }
-    console.log('added to queue');
+    
+    cb(null, {
+      statusCode: 200,
+      body: 'message added to queue'
+    });
     // lambda.invoke({
     //   InvocationType: 'Event',
     //   FunctionName: PROCESSOR_FUNCTION,

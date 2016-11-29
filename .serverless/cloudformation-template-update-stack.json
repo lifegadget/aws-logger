@@ -65,7 +65,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480462165785-2016-11-29T23:29:25.785Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-receiver",
         "Handler": "lib/receiver.handler",
@@ -88,7 +88,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480462165785-2016-11-29T23:29:25.785Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-event-manager",
         "Handler": "lib/event-manager.handler",
@@ -111,7 +111,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480462165785-2016-11-29T23:29:25.785Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-processor",
         "Handler": "lib/processor.handler",
@@ -134,7 +134,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1480341571808-2016-11-28T13:59:31.808Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1480462165785-2016-11-29T23:29:25.785Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-aggregator",
         "Handler": "lib/aggregator.handler",
@@ -224,6 +224,46 @@
         }
       }
     },
+    "S3BucketServerlessevents": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "serverless-events",
+        "NotificationConfiguration": {
+          "LambdaConfigurations": [
+            {
+              "Event": "s3:ObjectCreated:*",
+              "Function": {
+                "Fn::GetAtt": [
+                  "ReceiverLambdaFunction",
+                  "Arn"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ReceiverLambdaPermissionServerlesseventsS3": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ReceiverLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "s3.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:s3:::serverless-events"
+            ]
+          ]
+        }
+      }
+    },
     "ApiGatewayRestApi": {
       "Type": "AWS::ApiGateway::RestApi",
       "Properties": {
@@ -283,7 +323,7 @@
         "MethodResponses": []
       }
     },
-    "ApiGatewayDeployment1480341571815": {
+    "ApiGatewayDeployment1480462165793": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {

@@ -4,6 +4,38 @@ interface IDictionary<T> {
 interface AWSRequest {
     region: string;
 }
+interface IHospitalVisitor {
+    visitor: any;
+    reason: string;
+}
+interface IServerlessEvent {
+    id?: string;
+    queueId?: string;
+    sourceId?: string;
+    tagId?: string;
+    message?: string;
+    device?: IDictionary<any>;
+    ui?: IDictionary<any>;
+    architecture?: 'frontend' | 'backend' | 'db' | 'infra' | 'other';
+    geo?: IDictionary<any>;
+    app?: IDictionary<any>;
+    user?: IDictionary<any>;
+    transaction?: IDictionary<any>;
+    ipAddress?: string;
+    severity?: 'error' | 'warn' | 'info' | 'debug';
+    error?: IEventError;
+    senderId?: string;
+    sentTimestamp?: number;
+    processTimestamp?: number;
+    attributes?: IDictionary<any>;
+}
+interface IEventError {
+    code?: string;
+    line?: number;
+    column?: number;
+    message?: string;
+    stack?: any;
+}
 interface IRequestInput extends AWSRequest {
     resource?: string;
     path?: string;

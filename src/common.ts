@@ -6,6 +6,58 @@ interface AWSRequest {
   region: string;
 }
 
+interface IHospitalVisitor {
+  visitor: any,
+  reason: string,
+}
+
+interface IServerlessEvent {
+  /** Unique identififier for the event */
+  id?: string;
+  /** Unique identifier provided by SQS */
+  queueId?: string;
+  /** The application/micro-service which originated the event */
+  sourceId?: string;
+  /** 
+   * A generic tracker cookie/identifier for understanding longer 
+   * running workflow 
+   */
+  tagId?: string;
+  /** Prose message */
+  message?: string;
+  /** a dictionary of attributes that describe the device */
+  device?: IDictionary<any>,
+  /** a dictionary of attributes describing the user interface of the device */
+  ui?: IDictionary<any>,
+  architecture?: 'frontend' | 'backend' | 'db' | 'infra' | 'other',
+  geo?: IDictionary<any>,
+  app?: IDictionary<any>,
+  user?: IDictionary<any>,
+  transaction?: IDictionary<any>,
+  /** the source's IP address */
+  ipAddress?: string,
+  /** how significant is the message? */
+  severity?: 'error' | 'warn' | 'info' | 'debug';
+  /** error information, if appropriate */
+  error?: IEventError;
+  /** unique identifier of entity who posted this queue item */
+  senderId?: string;
+  /** time sent into SQS queue */
+  sentTimestamp?: number;
+  /** time being processed */
+  processTimestamp?: number;
+  /**  Any SQS message attributes that were passed into the queue */
+  attributes?: IDictionary<any>;
+}
+
+interface IEventError {
+  code?: string;
+  line?: number;
+  column?: number;
+  message?: string;
+  stack?: any;
+}
+
 interface IRequestInput extends AWSRequest {
   resource?: string;
   path?: string;
