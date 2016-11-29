@@ -28,6 +28,7 @@ interface IServerlessEvent {
     sentTimestamp?: number;
     processTimestamp?: number;
     attributes?: IDictionary<any>;
+    ReceiptHandle: string;
 }
 interface IEventError {
     code?: string;

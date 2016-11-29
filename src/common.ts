@@ -48,6 +48,7 @@ interface IServerlessEvent {
   processTimestamp?: number;
   /**  Any SQS message attributes that were passed into the queue */
   attributes?: IDictionary<any>;
+  ReceiptHandle: string;
 }
 
 interface IEventError {
