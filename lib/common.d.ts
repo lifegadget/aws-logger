@@ -1,6 +1,7 @@
 interface IDictionary<T> {
     [key: string]: T;
 }
+
 interface AWSRequest {
     region: string;
 }
@@ -59,6 +60,7 @@ interface ITimedRequest extends AWSRequest {
     resource: string[];
     detail: IDictionary<any>;
 }
+
 interface IContext {
     callbackWaitsForEmptyEventLoop?: Function;
     done?: Function;
@@ -126,4 +128,20 @@ interface IRequestHeaders {
     ['X-Forwarded-Port']?: string;
     ['X-Forwarded-Proto']?: string;
     [key: string]: string;
+}
+
+interface IRequestInput {
+    resource?: string;
+    path?: string;
+    httpMethod?: string;
+    headers?: IRequestHeaders;
+    querystringParameters?: IDictionary<string>;
+    pathParameters?: IDictionary<string>;
+    stageParameters?: IDictionary<string>;
+    requestContext?: IRequestContext;
+    body?: string;
+}
+interface IGatewayRequest {
+    message: string;
+    input: IRequestInput;
 }
