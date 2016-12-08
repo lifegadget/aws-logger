@@ -65,7 +65,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1481106535749-2016-12-07T10:28:55.749Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1481213533218-2016-12-08T16:12:13.218Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-receiver",
         "Handler": "lib/receiver.handler",
@@ -88,7 +88,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1481106535749-2016-12-07T10:28:55.749Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1481213533218-2016-12-08T16:12:13.218Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-event-manager",
         "Handler": "lib/event-manager.handler",
@@ -111,7 +111,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1481106535749-2016-12-07T10:28:55.749Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1481213533218-2016-12-08T16:12:13.218Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-processor",
         "Handler": "lib/processor.handler",
@@ -134,7 +134,7 @@
           "S3Bucket": {
             "Ref": "ServerlessDeploymentBucket"
           },
-          "S3Key": "serverless/serverless-event/dev/1481106535749-2016-12-07T10:28:55.749Z/serverless-event.zip"
+          "S3Key": "serverless/serverless-event/dev/1481213533218-2016-12-08T16:12:13.218Z/serverless-event.zip"
         },
         "FunctionName": "serverless-event-dev-aggregator",
         "Handler": "lib/aggregator.handler",
@@ -323,7 +323,7 @@
         "MethodResponses": []
       }
     },
-    "ApiGatewayDeployment1481106535757": {
+    "ApiGatewayDeployment1481213533225": {
       "Type": "AWS::ApiGateway::Deployment",
       "Properties": {
         "RestApiId": {

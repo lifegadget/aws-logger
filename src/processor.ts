@@ -5,6 +5,7 @@ import * as _ from 'lodash';
 import * as constants from './constants';
 import * as Promise from 'bluebird';
 import * as filter from './processor/filters';
+import * as utils from './utils';
 
 export interface IProcessorRequest extends AWSRequest {
   batchSize: number;
@@ -47,7 +48,6 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
       return;
     }
     console.log(`Received batch of ${data.Messages.length} events. Beginning to process.`);
-    console.log(JSON.stringify(data.Messages, null, 2));
 
     let state:IState = {
       stage: 'validation', 
@@ -55,7 +55,12 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
       rejected: [],
       hospital: [],
       events: data.Messages
+        .map(
+          m => utils.parseProperty(utils.onlyWith(m, 'MessageId', 'Body', 'ReceiptHandle'), 'Body')
+        )
     };
+
+    console.log('STATE: ', JSON.stringify(state, null, 2));
 
     validateEvents(state)
       .then(enrichEvents)
@@ -63,7 +68,7 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
       .then(dequeue)
       .then(hospitalize)
       .catch(err => {
-        console.log(`Ran into problem processing message ${event.MessageId} during ${state.stage} stage:\n`, JSON.stringify(err, null, 2));
+        console.log(`Ran into problem processing message ${context.awsRequestId} during ${state.stage} stage:\n`, JSON.stringify(err, null, 2));
         
       });
   }); 
@@ -101,8 +106,7 @@ function validateEvents(state: IState): Promise<IState> {
       case 'validation': 
         state.events = state.events.filter(event => {
           if (
-            filter.hasBody(event) && 
-            filter.bodyIsParsable(event)
+            filter.hasBody(event)
           ) {
             return true;
           } else {
@@ -124,6 +128,10 @@ function validateEvents(state: IState): Promise<IState> {
   }); // end promise
 } 
 
+// function eventCleaning(state: IProcessingState): Promise<IProcessingState> {
+//   state.stage = 'cleaning';
+// }
+
 /**
  * Parallelize all enrichments across the messages
  */
@@ -137,8 +145,7 @@ function enrichEvents(state: IProcessingState): Promise<IProcessingState> {
   state.events.map(m => promises.push(enrichEvent(m)));
   Promise.all(promises)
     .then(events => {
-      console.log('EVENTS:', events);
-      state.events = events.map(e => e.result);
+      console.log('Enriched event:', JSON.stringify(events, null, 2));
       resolve(state);
     })
     .catch(reject);
