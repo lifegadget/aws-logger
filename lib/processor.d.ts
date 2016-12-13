@@ -1,4 +1,5 @@
 import './common';
+import 'source-map-support/register';
 export interface IProcessorRequest extends AWSRequest {
     batchSize: number;
     parent: string;

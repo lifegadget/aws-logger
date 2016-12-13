@@ -6,6 +6,7 @@ import * as constants from './constants';
 import * as Promise from 'bluebird';
 import * as filter from './processor/filters';
 import * as utils from './utils';
+import 'source-map-support/register';
 
 export interface IProcessorRequest extends AWSRequest {
   batchSize: number;
@@ -25,9 +26,6 @@ export interface IProcessorRequest extends AWSRequest {
  */
 export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewayCallback) => {
   const sqs = new AWS.SQS(Queue.QUEUE_REGION(event));
-  const s3 = new AWS.S3(
-    _.assign(Queue.QUEUE_REGION(event), { Bucket: constants.S3_BUCKET })
-  );
   console.log('EVENT: ', event);
 
   const queueParams = {
@@ -38,7 +36,7 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
     MessageAttributeNames: [
       "All"
     ], 
-    QueueUrl: Queue.EVENT_QUEUE_URL(event)
+    QueueUrl: Queue.EVENT_QUEUE_URL
  };
 
   sqs.receiveMessage(queueParams, (err, data) => {
@@ -47,6 +45,8 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
       cb(JSON.stringify(err));
       return;
     }
+    console.log(JSON.stringify(data.Messages, null, 2));
+    
     console.log(`Received batch of ${data.Messages.length} events. Beginning to process.`);
 
     let state:IState = {
@@ -56,7 +56,7 @@ export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewa
       hospital: [],
       events: data.Messages
         .map(
-          m => utils.parseProperty(utils.onlyWith(m, 'MessageId', 'Body', 'ReceiptHandle'), 'Body')
+          m => utils.parseProperty(utils.onlyWith(m, 'Body', 'ReceiptHandle'), 'Body')
         )
     };
 
@@ -128,10 +128,6 @@ function validateEvents(state: IState): Promise<IState> {
   }); // end promise
 } 
 
-// function eventCleaning(state: IProcessingState): Promise<IProcessingState> {
-//   state.stage = 'cleaning';
-// }
-
 /**
  * Parallelize all enrichments across the messages
  */
@@ -162,6 +158,36 @@ function enrichEvent(event: IServerlessEvent): Promise<IServerlessEvent> {
 
 function saveToS3(state: IProcessingState): Promise<IProcessingState> {
   state.stage = 'saving';
+  const s3 = new AWS.S3(
+    _.assign(Queue.QUEUE_REGION({ region: 'eu-west-1' }), { Bucket: constants.S3_BUCKET })
+  );
+  const sqs = new AWS.SQS({ region: 'eu-west-1' });
+
+  // iterate through each event
+  state.events.map(event => {
+    const objectParams = {
+      Bucket: constants.S3_BUCKET,
+      Key: `${event.eventType}/${event.id}`,
+      Body: JSON.stringify(event),
+    };
+    s3.putObject(objectParams, (err, data) => {
+      if (err) {
+        state.hospital.push({
+          visitor: event,
+          reason: JSON.stringify(err)
+        });
+        console.log(`Error in putting S3 Object: ${JSON.stringify(err)}`);
+        
+      } else {
+        console.log(`successfully PUT ${event.id}`, data);
+        const sqsParams = {
+          QueueUrl: Queue.EVENT_QUEUE_URL, 
+          ReceiptHandle: event.ReceiptHandle
+        };
+        sqs.deleteMessage(sqsParams);
+      }
+    });
+  });
   return Promise.resolve(state);
 } 
 
@@ -177,8 +203,8 @@ function hospitalize(state: IProcessingState): Promise<IState> {
   state.hospital = state.hospital.filter(item => {
     const id = item.visitor.ReceiptHandle;
     const params = {
-      QueueUrl: Queue.EVENT_QUEUE_URL(),
-      ReceiptHandle: id
+      QueueUrl: Queue.EVENT_QUEUE_URL,
+      ReceiptHandle: item.visitor.ReceiptHandle
     };
     sqs.deleteMessage(params, (err, data) => {
       if(err) {
@@ -195,17 +221,12 @@ function hospitalize(state: IProcessingState): Promise<IState> {
 
 /** Converts an SQS message to a Serverless Event */
 function convertMessageToEvent(message: AWS.SQS.Types.Message): IServerlessEvent {
-  let body:IServerlessEvent = message.Body || { };
-  try {
-    body = JSON.parse(message.Body);
-  } catch(e) {
-    body = {};
-    // TODO: raise meta-error
-  }
+  let body:IServerlessEvent = message.Body ? JSON.parse(message.Body) : { eventType: 'unknown' };
   console.log('BODY IS: ', body);
   
   return {
     id: body.id || message.MessageId,
+    eventType: body.eventType,
     ipAddress: body.ipAddress,
     queueId: message.MessageId,
     sourceId: body.sourceId || 'undefined-app',

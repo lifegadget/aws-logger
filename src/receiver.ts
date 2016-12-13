@@ -12,7 +12,7 @@ export const handler = (event: IRequestInput, context: IContext, cb: IGatewayCal
   const lambda = new AWS.Lambda(Queue.QUEUE_REGION(event));
   const message: AWS.SQS.Types.SendMessageRequest = {
     MessageBody: event.body,
-    QueueUrl: Queue.EVENT_QUEUE_URL(event),
+    QueueUrl: Queue.EVENT_QUEUE_URL,
   };
   const PROCESSOR_FUNCTION = process.env['AWS_LAMBDA_FUNCTION_NAME'].replace('receiver', 'processor');
 

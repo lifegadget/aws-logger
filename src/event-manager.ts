@@ -16,7 +16,7 @@ export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCal
   const lambda = new AWS.Lambda(Queue.QUEUE_REGION(event));
 
   sqs.getQueueAttributes({
-      QueueUrl: Queue.EVENT_QUEUE_URL(event),
+      QueueUrl: Queue.EVENT_QUEUE_URL,
       AttributeNames: ['ApproximateNumberOfMessages']
     },
     (err, data) => {
@@ -26,7 +26,7 @@ export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCal
 
       const queueDepth = Number(data.Attributes['ApproximateNumberOfMessages']);
       const batchSize = 10;
-      const workers = Math.round(queueDepth / batchSize);
+      const workers = Math.round(queueDepth / batchSize) + 1;
       
       console.log(`Queue depth is ${queueDepth}, batch size is ${batchSize} so creating ${workers} processor workers to drain queue`);
 

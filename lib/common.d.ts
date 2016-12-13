@@ -5,11 +5,12 @@ interface AWSRequest {
     region: string;
 }
 interface IHospitalVisitor {
-    visitor: any;
+    visitor: IServerlessEvent;
     reason: string;
 }
 interface IServerlessEvent {
     id?: string;
+    eventType: 'log' | 'performance' | 'workflow';
     queueId?: string;
     sourceId?: string;
     tagId?: string;

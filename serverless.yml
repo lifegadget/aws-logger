@@ -64,7 +64,6 @@ functions:
     handler: lib/receiver.handler
     events:
       - http: POST logger
-      - s3: serverless-events
 
   event-manager:
     description: Checks the event queue for size and then executes an appropriate number of "processors" to drain the queue.
@@ -77,7 +76,19 @@ functions:
   processor:
     description: Takes events out of the queue and structures them into useful JSON blobs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties.
     handler: lib/processor.handler
-
+    events:
+      - s3: serverless-events
+    iamRoleStatements: 
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+          - s3:PutObject
+        Resource: "arn:aws:s3:::serverless-events"
+          # Fn::Join:
+          #   - ""
+          #   - - "arn:aws:s3:::"
+          #     - Ref : "serverless-events"
+    
   aggregator:
     description: Rolls up transactional entries into aggregates (including daily, monthly, user, etc).
     handler: lib/aggregator.handler

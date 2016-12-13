@@ -7,13 +7,14 @@ interface AWSRequest {
 }
 
 interface IHospitalVisitor {
-  visitor: any,
+  visitor: IServerlessEvent | AWS.SQS.Types.Message,
   reason: string,
 }
 
 interface IServerlessEvent {
   /** Unique identififier for the event */
   id?: string;
+  eventType: 'log' | 'performance' | 'workflow';
   /** Unique identifier provided by SQS */
   queueId?: string;
   /** The application/micro-service which originated the event */
@@ -48,7 +49,7 @@ interface IServerlessEvent {
   processTimestamp?: number;
   /**  Any SQS message attributes that were passed into the queue */
   attributes?: IDictionary<any>;
-  ReceiptHandle: string;
+  ReceiptHandle?: string;
 }
 
 interface IEventError {
