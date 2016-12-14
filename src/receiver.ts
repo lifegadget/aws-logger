@@ -30,31 +30,6 @@ export const handler = (event: IRequestInput, context: IContext, cb: IGatewayCal
       statusCode: 200,
       body: 'message added to queue'
     });
-    // lambda.invoke({
-    //   InvocationType: 'Event',
-    //   FunctionName: PROCESSOR_FUNCTION,
-    //   Payload: JSON.stringify(data),
-    // }, (e: any, response: any) => {
-    //   if (e) {
-    //     console.log(`There was a problem invoking the "processor" lambda function (${PROCESSOR_FUNCTION})`);
-    //     console.error(e);
-    //     cb(null, {
-    //       statusCode: 500,
-    //       body: 'Problem invoking a processor after event added to queue',
-    //       error: e.code,
-    //     });
-    //     return;
-    //   }
-    //   console.log('handed off to processor function\n', JSON.stringify(data, null , 2));
-    //   cb(null, {
-    //     statusCode: 200,
-    //     body: JSON.stringify({
-    //       lambda: response,
-    //       sqs: data,
-    //     }),
-    //   });
-    // });
-
   });
 
 };

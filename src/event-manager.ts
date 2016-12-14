@@ -22,6 +22,7 @@ export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCal
     (err, data) => {
       if (err) {
         console.log('Error getting queue attributes:\n', JSON.stringify(err));
+        return;
       }
 
       const queueDepth = Number(data.Attributes['ApproximateNumberOfMessages']);
