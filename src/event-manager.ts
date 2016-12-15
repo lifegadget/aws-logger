@@ -6,6 +6,7 @@ let workersDeployed: boolean = true;
 
 export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCallback) => {
   console.log('EVENT:\n', JSON.stringify(event, null, 2));
+  console.log('ENV:\n', JSON.stringify(process.env, null, 2));
   console.log('Stats:', JSON.stringify({
     memory: context.memoryLimitInMB,
     invokeId: context.invokeid,
@@ -39,7 +40,8 @@ export const handler = (event: ITimedRequest, context: IContext, cb: IGatewayCal
             batchSize,
             parent: event.id,
             sequence: `${i} of ${workers}`,
-            region: event.region
+            region: event.region,
+            stage: process.env['stage'],
           }),          
         }, (err, data) => {
           if (err) {

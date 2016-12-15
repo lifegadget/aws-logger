@@ -26,7 +26,8 @@ export interface IProcessorRequest extends AWSRequest {
  */
 export const handler = (event: IProcessorRequest, context: IContext, cb: IGatewayCallback) => {
   const sqs = new AWS.SQS(Queue.QUEUE_REGION(event));
-  console.log('EVENT: ', event);
+  console.log('EVENT:\n', JSON.stringify(event, null, 2));
+  console.log('ENV:\n', JSON.stringify(process.env, null, 
 
   const queueParams = {
     AttributeNames: [
@@ -158,17 +159,22 @@ function enrichEvent(event: IServerlessEvent): Promise<IServerlessEvent> {
 
 function saveToS3(state: IProcessingState): Promise<IProcessingState> {
   state.stage = 'saving';
-  const s3 = new AWS.S3(
-    _.assign(Queue.QUEUE_REGION({ region: 'eu-west-1' }), { Bucket: constants.S3_BUCKET })
-  );
-  const sqs = new AWS.SQS({ region: 'eu-west-1' });
+  const Bucket:string = `serverless-event-${process.env['STAGE']}`;
+  const region:string = process.env['AWS_REGION'];
+
+  const s3 = new AWS.S3({ region });
+  const sqs = new AWS.SQS({ region });
 
   // iterate through each event
   state.events.map(event => {
+    console.log('EVENT:', event);
+    const body = event.Body;
+    console.log('BODY:', JSON.stringify(body, null, 2));
+    
     const objectParams = {
-      Bucket: constants.S3_BUCKET,
-      Key: `${event.eventType}/${event.id}`,
-      Body: JSON.stringify(event),
+      Bucket,
+      Key: `${body.eventType}/${body.id}.json`,
+      Body: JSON.stringify(body),
     };
     s3.putObject(objectParams, (err, data) => {
       if (err) {

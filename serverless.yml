@@ -159,7 +159,6 @@ resources:
                 - lambda:ListFunctions
               Resource: 
                 - "arn:aws:lambda:${self:custom.region}:*:function:serverless-event-${self:custom.stage}-*"
-                # Fn::Sub: 'aws:lambda:${AWS::Region}:${AWS::AccountId}:xxxxx:xxx/*'
         Roles:
           - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
           - serverless-event-${self:custom.stage}-reporter
