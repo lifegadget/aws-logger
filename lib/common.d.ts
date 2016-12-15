@@ -5,7 +5,7 @@ interface AWSRequest {
     region: string;
 }
 interface IHospitalVisitor {
-    visitor: IServerlessEvent;
+    visitor: IServerlessEvent | AWS.SQS.Types.Message;
     reason: string;
 }
 interface IServerlessEvent {
@@ -29,7 +29,7 @@ interface IServerlessEvent {
     sentTimestamp?: number;
     processTimestamp?: number;
     attributes?: IDictionary<any>;
-    ReceiptHandle: string;
+    ReceiptHandle?: string;
 }
 interface IEventError {
     code?: string;

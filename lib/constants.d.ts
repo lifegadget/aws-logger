@@ -1,1 +1,1 @@
-export declare const S3_BUCKET: string;
+export declare const S3_BUCKET = "serverless-events";

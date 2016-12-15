@@ -11,6 +11,7 @@ package:
 
 custom:
   stage: "${opt:stage, self:provider.stage}"
+  region: "${opt:region, self:provider.region}"
 
 provider:
   name: aws
@@ -24,19 +25,12 @@ functions:
   receiver:
     description: Receives events from clients and place into an SQS queue.
     handler: lib/receiver.handler
-    role: 
-      - defaultRole
-      - queuePublisher
     events:
       - http: POST logger
 
   event-manager:
     description: Checks the event queue for message depth and then invokes an appropriate number of "processors" to drain the queue.
     handler: lib/event-manager.handler
-    role: 
-      - defaultRole
-      - functionInvoker
-      - queueMeta
     events:
       - schedule:
           rate: rate(1 minute)
@@ -45,18 +39,10 @@ functions:
   processor:
     description: Takes events out of the queue and structures them into useful JSON blobs in S3. When the update to an S3 bucket is completed it will also send an SNS message to any interested parties.
     handler: lib/processor.handler
-    role: 
-      - defaultRole
-      - queueWorker
-      - s3Contributor
 
   aggregator:
     description: Rolls up transactional entries into aggregates (including daily, monthly, user, etc).
     handler: lib/aggregator.handler
-    role: 
-      - defaultRole
-      - functionInvoker
-      - s3Contributor
     events:
       - schedule:
           rate: rate(60 minutes)
@@ -64,124 +50,212 @@ functions:
 
 resources:
   Resources:
-    defaultRole: 
+    # ROLES
+    # -----------------------------------------------------------
+    reporter:
       Type: AWS::IAM::Role
       Properties:
-        Path: /serverless-event
-        RoleName: ServerlessEventDefaultRole
+        RoleName: serverless-event-${self:custom.stage}-reporter
         AssumeRolePolicyDocument:
-          Version: '2017'
+          Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Principal:
                 Service:
                   - lambda.amazonaws.com
               Action: sts:AssumeRole
-        Policies:
-          - PolicyName: ServerlessEventLogging
-            PolicyDocument:
-              Version: '2017'
-              Statement:
-                - Effect: Allow # note that these rights are given in the default policy and are required if you want logs out of your lambda(s)
-                  Action:
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                  Resource: arn:aws:logs:${self:provider.region}:947418478752:log-group:/aws/lambda/*:*:*
-                -  Effect: "Allow"
-                   Action:
-                     - "s3:PutObject"
-                   Resource:
-                     Fn::Join:
-                       - ""
-                       - - "arn:aws:s3:::"
-                         - "Ref" : "ServerlessDeploymentBucket"      
 
-    functionInvoker:
+    receiver:
       Type: AWS::IAM::Role
-      Policies:
-        - PolicyName: ServerlessEventInvoker
-          PolicyDocument:
-            Version: '2017'
-            Statements:
-              - Effect: Allow
-                Action:
-                  - lambda:InvokeFunction
+      Properties:
+        RoleName: serverless-event-${self:custom.stage}-receiver
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
     
-    queueMeta:
+    processor:
       Type: AWS::IAM::Role
-      Policies:
-        - PolicyName: ServerlessEventQueueMeta
-          PolicyDocument:
-            Version: '2017'
-            Statements:
-              - Effect: Allow
-                Action:
-                  - sqs:GetQueueAttributes
-                  - sqs:GetQueueUrl
-                  - sqs:ListQueues
-                Resource: '*'
+      Properties:
+        RoleName: serverless-event-${self:custom.stage}-processor
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+
+    aggregator:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: serverless-event-${self:custom.stage}-aggregator
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+
+    retriever:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: serverless-event-${self:custom.stage}-retriever
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+
+    # POLICIES
+    # -----------------------------------------------------------
+    logging:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-logging 
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/*:*:*
+            - Effect: "Allow"
+              Action:
+                - "s3:PutObject"
+              Resource:
+                Fn::Join:
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - "Ref" : "ServerlessDeploymentBucket" 
+        Roles: 
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-receiver
+          - serverless-event-${self:custom.stage}-reporter
+          - serverless-event-${self:custom.stage}-aggregator
+      
+    lambdaInvocation:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-invocation
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+                - lambda:ListFunctions
+              Resource: 
+                - "arn:aws:lambda:${self:custom.region}:*:function:serverless-event-${self:custom.stage}-*"
+                # Fn::Sub: 'aws:lambda:${AWS::Region}:${AWS::AccountId}:xxxxx:xxx/*'
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-reporter
+
+    s3reader:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-reader
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListAllMyBuckets
+              Resource:
+                - "arn:aws:s3:::*"
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-receiver
+
+    s3writer:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-writer
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:ListAllMyBuckets
+              Resource:
+                - "arn:aws:s3:::*"
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-processor
 
     queueWorker:
-      Type: AWS::IAM::Role
-      Policies:
-        - PolicyName: ServerlessEventQueueWorker
-          PolicyDocument:
-            Version: '2017'
-            Statements:
-              - Effect: Allow
-                Action:
-                  - sqs:ReceiveMessage
-                  - sqs:DeleteMessage
-                  - sqs:DeleteMessageBatch
-                Resource: '*'
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-queue-worker
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:DeleteMessageBatch
+              Resource:
+                - "arn:aws:sqs:*"
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-reporter
 
     queuePublisher:
-      Type: AWS::IAM::Role
-      Policies:
-        - PolicyName: ServerlessEventQueuePublisher
-          PolicyDocument:
-            Version: '2017'
-            Statements:
-              - Effect: Allow
-                Action:
-                  - sqs:SendMessage
-                  - sqs:SendMessageBatch
-                  - sqs:SetQueueAttributes
-                Resource: '*'
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-queue-publisher
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:SendMessageBatch
+                - sqs:SetQueueAttributes
+              Resource:
+                - "arn:aws:sqs:*"
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-reporter
 
-    s3Contributor:
-      Type: AWS::IAM::Role
-      Policies:
-        - PolicyName: ServerlessEventS3Contributor
-          PolicyDocument:
-            Version: '2017'
-            Statements:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:ListAllMyBuckets
-                Resource: '*'  
+    queueMeta:
+      Type: AWS::IAM::Policy
+      Properties:
+        PolicyName: serverless-event-queue-meta
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:GetQueueAttributes
+                - sqs:GetQueueUrl
+                - sqs:ListQueues
+              Resource:
+                - "arn:aws:sqs:*"
+        Roles:
+          - serverless-event-${self:custom.stage}-${self:provider.region}-lambdaRole
+          - serverless-event-${self:custom.stage}-reporter
 
     EventsBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: serverless-event
-
-
-
-#    The following are a few example events you can configure
-#    NOTE: Please make sure to change your handler code to work with those events
-#    Check the event documentation for details
-#    events:
-#      - http:
-#          path: users/create
-#          method: get
-#      - s3: ${env:BUCKET}
-#      - schedule: rate(10 minutes)
-#      - sns: greeter-topic
-#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
+        BucketName: serverless-event-${self:custom.stage}
 
 # you can add CloudFormation resource templates here
 #resources:
